@@ -1,66 +1,54 @@
+NAME
+    Tie::NetAddr::IP - Implements a Hash where the key is a subnet
 
+SYNOPSIS
+      use Tie::NetAddr::IP;
 
+      my %WhereIs;
+  
+      tie %WhereIs, Tie::NetAddr::IP;
 
-User Contributed Perl Documentation                    Address(3)
+      $WhereIs{"10.0.10.0/24"} = "Lab, First Floor";
+      $WhereIs{"10.0.20.0/24"} = "Datacenter, Second Floor";
+      $WhereIs{"10.0.30.0/27"} = "Remote location";
+      $WhereIs{"0.0.0.0/0"} = "God knows where";
 
+      foreach $host ("10.0.10.1", "10.0.20.15", "10.0.32.17", "10.10.0.1") {
+         print "Host $host is in ", $WhereIs{$host}, "\n";
+      }
 
+      foreach $subnet (keys %WhereIs) {
+         print "Network ", $subnet, " is used in ", 
+         $WhereIs{$subnet}, "\n";
+      }
 
+      untie %WhereIs;
 
+DESCRIPTION
+    This module overloads hashes so that the key can be a subnet as in
+    NetAddr::IP. When looking values up, an interpretation will be made to
+    find the given key within the subnets specified in the hash.
 
+    The code sample provided on the SYNOPSIS would print out the locations
+    of every machine in the `foreach' loop.
 
+    Care must be taken, as only strings that can be parsed as an IP address
+    by NetAddr::IP can be used as keys for this hash.
 
+    Iterators on the hash such as `foreach', `each', `keys' and `values'
+    will only see the actual subnets provided as keys to the hash. When
+    looking up a value such as in `$hash{$ipaddress}' this IP address will
+    be looked up among the subnets existing as keys within the hash. The
+    matching subnet with the longest mask (ie, the most specific subnet)
+    will win and its associated value will be returned.
 
+    This code can be distributed freely according to the terms set forth in
+    the PERL license provided that proper credit is maintained. Please send
+    bug reports and feedback to the author for further improvement.
 
+AUTHOR
+    Luis E. Munoz (lem@cantv.net)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8/Sep/99        Last change: perl 5.005, patch 02               1
-
-
-
-
-
+SEE ALSO
+    perl(1), NetAddr::IP(3).
 

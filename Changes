@@ -6,4 +6,9 @@ Revision history for Perl extension Tie::NetAddr::IP.
 1.00  Wed Jul 05 11:00:00 2000
 	- Renamed to Tie::NetAddr::IP to match the modulelist name
 
+1.50  Sun Oct 07 17:25:00 2001
+	- Modified to use NetAddr::IP v3.00
+	- Added a number of new tests
+
+
 

@@ -8,7 +8,7 @@ WriteMakefile(
 	      'DEFINE'	=> '',     # e.g., '-DHAVE_SOMETHING' 
 	      'INC'	=> '',     # e.g., '-I/usr/include/other' 
 	      'PREREQ_PM' => {
-		  'NetAddr::IP' => 0,
+		  'NetAddr::IP' => 3,
 		  'Carp' => 0
 		  }
 );

@@ -1,8 +1,9 @@
 IP.pm
 Changes
+README
 MANIFEST
 Makefile.PL
-README
 sample.pl
 t/1.t
 t/2.t
+t/keys.t

@@ -3,9 +3,9 @@ package Tie::NetAddr::IP;
 use strict;
 use vars qw($VERSION);
 use Carp;
-use NetAddr::IP;
+use NetAddr::IP 3.00;
 
-$VERSION = '1.00';
+$VERSION = '1.50';
 
 # Preloaded methods go here.
 
@@ -23,18 +23,21 @@ sub FETCH {
     my $self = shift;
     my $where = shift;
     my $ip = new NetAddr::IP $where;
-    if (!$ip) {
-	croak "$where is not a valid NetAddr::IP specification";
-    }
-    else {
-	for(my $mask = 32; $mask >= 0 ; --$mask) {
-	    foreach my $network (keys %{$self->[$mask]}) {
-		if ($self->[$mask]->{$network}->{'where'}->contains($ip)) {
-		    return $self->[$mask]->{$network}->{'what'};
+
+    if ($ip) {
+	my @fles = reverse @$self;
+	for my $item (@fles) {
+	    next unless ref $item;
+	    for my $a (keys %{$item}) {
+		if ($item->{$a}->{where}->contains($ip)) {
+		    return $item->{$a}->{what};
 		}
 	    }
 	}
+    } else {
+	croak "$where is not a valid NetAddr::IP specification";
     }
+
     return undef;		# None of the networks matched the spec
 }
 
@@ -43,20 +46,17 @@ sub STORE {
     my $where = shift;
     my $what = shift;
     my $ip = new NetAddr::IP $where;
-    if (!$ip) {
-	croak "$where is not a valid NetAddr::IP specification";
-    }
-    else {
-	my $cidr_mask_mode = $NetAddr::IP::Use_CIDR_Notation;
-	$NetAddr::IP::Use_CIDR_Notation = 1;
-	my $masklen = $ip->mask_to_string;
-	$self->[33]++ 
-	    if not defined($self->[$masklen]->{$ip->network->to_string});
-	$self->[$masklen]->{$ip->network->to_string} = {
-	    'where' => $ip,
-	    'what' => $what
+
+    if ($ip) {
+	my $mask = $ip->masklen;
+	my $addr = $ip->addr;
+
+	$self->[$mask]->{$addr} = {
+	    where	=> $ip,
+	    what	=> $what,
 	};
-	$NetAddr::IP::Use_CIDR_Notation = $cidr_mask_mode;
+    } else {
+	croak "$where is not a valid IP address specification";
     }
 }
 
@@ -64,16 +64,11 @@ sub EXISTS {
     my $self = shift;
     my $where = shift;
     my $ip = new NetAddr::IP $where;
-    if (!$ip) {
+
+    if ($ip) {
+	return exists $self->[$ip->masklen]->{$ip->addr};
+    } else {
 	croak "$where is not a valid NetAddr::IP specification";
-    }
-    else {
-	my $cidr_mask_mode = $NetAddr::IP::Use_CIDR_Notation;
-	$NetAddr::IP::Use_CIDR_Notation = 1;
-	my $masklen = $ip->mask_to_string;
-	my $addr = $ip->network->to_string;
-	$NetAddr::IP::Use_CIDR_Notation = $cidr_mask_mode;
-	return exists $self->[$masklen]->{$addr};
     }
 }
 
@@ -81,68 +76,55 @@ sub DELETE {
     my $self = shift;
     my $where = shift;
     my $ip = new NetAddr::IP $where;
-    if (!$ip) {
+
+    if ($ip) {
+	my $mask = $ip->masklen;
+	my $addr = $ip->addr;
+
+	return delete $self->[$mask]->{$addr};
+
+    } else {
 	croak "$where is not a valid NetAddr::IP specification";
-    }
-    else {
-	my $cidr_mask_mode = $NetAddr::IP::Use_CIDR_Notation;
-	$NetAddr::IP::Use_CIDR_Notation = 1;
-	my $masklen = $ip->mask_to_string;
-	my $addr = $ip->network->to_string;
-	$NetAddr::IP::Use_CIDR_Notation = $cidr_mask_mode;
-	--$self->[33] if defined($self->[$masklen]->{$addr});
-	return delete $self->[$masklen]->{$addr};
     }
 }
 
 sub CLEAR {
     my $self = shift;
-    for(my $mask = 32; $mask >= 0 ; --$mask) {
-	foreach my $network (keys %{$self->[$mask]}) {
-	    DELETE $self, $network;
-	}
-    }
+    splice(@$self, 0, scalar @$self);
+    $self->[129] = 0;
 }
 
 sub NEXTKEY {
     my $self = shift;
     my $last = shift;
-    my $lastmask = 0;
-    my $origmask = 0;
-    my $lastaddr;
-    my $ip;
-    my $cidr_mask_mode = $NetAddr::IP::Use_CIDR_Notation;
-    my $found_key = undef;
-    my $found;
 
-    $NetAddr::IP::Use_CIDR_Notation = 1;
+    if (defined $last) {
+	my $l_ip = new NetAddr::IP $last;
+	return undef unless $l_ip;
 
-    if (defined $last and $ip = new NetAddr::IP $last) {
-	$origmask = $lastmask = $ip->mask_to_string;
-	$lastaddr = $ip->network->to_string;
-    }
-    else {
-	$lastmask = 0;
-	$found = 1;
-    }
+	my $found = 0;
 
-  LOOKUP:
-    while (1) {
-	foreach my $cur_key (keys %{$self->[$lastmask]}) {
-	    if ($found) { 
-		$NetAddr::IP::Use_CIDR_Notation = $cidr_mask_mode;
-		return wantarray ? 
-		    ($cur_key, $self->[$lastmask]->{$cur_key}->{'what'})
-			: $cur_key;
+	for my $bits ($l_ip->masklen .. 128) {
+	    for my $a (keys %{$self->[$bits]}) {
+		if ($a eq $l_ip->addr and $bits = $l_ip->masklen) {
+		    $found = 1;
+		    next;
+		}
+		if ($found) {
+		    my $r = $self->[$bits]->{$a}->{where}->cidr;
+		    return wantarray ? ($r) : $r;
+		}
 	    }
-	    if ($cur_key eq $lastaddr) { $found = 1; }
 	}
-	++$lastmask;
-	last if $lastmask > 32;
+    } else {
+	for my $bits (0 .. 128) {
+	    for my $a (keys %{$self->[$bits]}) {
+		my $r = $self->[$bits]->{$a}->{where}->cidr;
+		return wantarray ? ($r) : $r;
+	    }
+	}
+	
     }
-    
-    $NetAddr::IP::Use_CIDR_Notation = $cidr_mask_mode;
-
     return wantarray ? () : undef;
 }
 
