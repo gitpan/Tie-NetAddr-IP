@@ -9,6 +9,10 @@ WriteMakefile(
 	      'INC'	=> '',     # e.g., '-I/usr/include/other' 
 	      'PREREQ_PM' => {
 		  'NetAddr::IP' => 3,
-		  'Carp' => 0
-		  }
+		  'Carp' => 0,
+		  'Test::More' => 0,
+		  },
+	      ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
+	       (ABSTRACT_FROM	=> 'IP.pm',
+		AUTHOR     	=> 'Luis E. Muñoz <lem@cantv.net>') : ()),
 );

@@ -1,10 +1,6 @@
-#use Tie::NetAddr::IP;
-require "IP.pm";
+use Test::More tests => 12;
 
-# Some basic tests
-
-$| = 1; 
-print "1..10\n";
+use_ok('Tie::NetAddr::IP');
 
 my $count = 1;
 
@@ -18,13 +14,10 @@ $Test{'3.0.0.0/8'} = 3;
 $Test{'4.0.0.0/8'} = 4;
 $Test{'5.0.0.0/8'} = 5;
 
+is(keys %Test, 5);
+
 for my $k (sort keys %Test) {
-    if ($Test{$k} == $count) {
-	print "ok $count\n";
-    } else {
-	print "not ok $count\n";
-    }
-    
+    is($Test{$k}, $count);
     ++$count;
 }
 
@@ -37,12 +30,7 @@ $Test{'4.0.0.0/8'} = 9;
 $Test{'5.0.0.0/8'} = 10;
 
 for my $k (sort keys %Test) {
-    if ($Test{$k} == $count) {
-	print "ok $count\n";
-    } else {
-	print "not ok $count\n";
-    }
-    
+    is($Test{$k}, $count);
     ++$count;
 }
 
